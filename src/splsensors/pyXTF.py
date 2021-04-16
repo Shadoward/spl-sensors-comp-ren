@@ -549,6 +549,7 @@ class XTFReader:
 
 		# read the packet header.  This permits us to skip packets we do not support
 		HeaderType, SubChannelNumber, NumChansToFollow, NumBytesThisRecord = self.readPacketheader()
+		print(f'{HeaderType}, {SubChannelNumber}, {NumChansToFollow}, {NumBytesThisRecord}', flush=True)
 		if HeaderType == 0:
 			ping = XTFPINGHEADER(self.fileptr, self.XTFFileHdr, SubChannelNumber, NumChansToFollow, NumBytesThisRecord)
 			
@@ -557,7 +558,7 @@ class XTFReader:
 			if padBytes > 0:
 				data = self.fileptr.read(padBytes)
 		else:
-			# print ("unsupported packet type: %s at byte offset %s" % (HeaderType, currentPacketPosition))
+			print ("unsupported packet type: %s at byte offset %s" % (HeaderType, currentPacketPosition))
 			self.fileptr.seek(currentPacketPosition + NumBytesThisRecord, 0)
 	
 		return ping

@@ -12,9 +12,10 @@ from __future__ import (absolute_import, division,
 from builtins import *
 
 ##### Sensor reader packages #####
-from pyXTF import * # https://github.com/pktrigg/pyxtf
+#from pyXTF import * # https://github.com/pktrigg/pyxtf
 from pyall import * # https://github.com/pktrigg/pyall
 from obspy import read
+import pyxtf
 
 ##### Basic packages #####
 import datetime
@@ -53,6 +54,7 @@ if len(sys.argv) >= 2:
     progress_expr="current / total * 100",
     hide_progress_msg=True,
     richtext_controls=True,
+    clear_before_run=True,
     #richtext_controls=True,
     terminal_font_family = 'Courier New', # for tabulate table nice formatation
     #dump_build_config=True,
@@ -73,7 +75,7 @@ if len(sys.argv) >= 2:
                 'menuTitle': 'About',
                 'name': 'splsensors',
                 'description': 'Linename comparison tool between SPL and sensors',
-                'version': '0.3.8',
+                'version': '0.3.9',
                 'copyright': '2020',
                 'website': 'https://github.com/Shadoward/splsensors',
                 'developer': 'patrice.ponchant@fugro.com',
@@ -956,23 +958,49 @@ def sensorsfc(firstrun, lsFile, ssFormat, ext, cmd, buffer, outputFolder, dfSPL,
             fName = os.path.splitext(os.path.basename(f))[0]        
             # MBES *.all Format https://github.com/pktrigg/pyall
             if ssFormat == 'MBES':
-                r = ALLReader(f)          
-                numberOfBytes, STX, typeOfDatagram, EMModel, RecordDate, RecordTime = r.readDatagramHeader() # read the common header for any datagram.
-                fStart = to_DateTime(RecordDate, RecordTime)
-                r.rewind()
-                r.close() 
-                
+                if os.path.getsize(f) == 0:
+                    print(f'MBE File is empty {f}. The file will be skip. Please check...', flush=True)
+                    fStart = datetime.datetime(1980, 1, 1)
+                else:
+                    r = ALLReader(f)          
+                    numberOfBytes, STX, typeOfDatagram, EMModel, RecordDate, RecordTime = r.readDatagramHeader() # read the common header for any datagram.
+                    fStart = to_DateTime(RecordDate, RecordTime)
+                    r.rewind()
+                    r.close() 
+                    
             # SSS *.xtf Files https://github.com/pktrigg/pyxtf
             if ssFormat == 'SSS':
                 file_size = os.path.getsize(f)/(1024*1024)
                 if file_size > 1: # skip file smaller than 1 MB
-                    r = XTFReader(f)            
-                    pingHdr = r.readPacket()
-                    if pingHdr != None:
-                        fStart = datetime.datetime(pingHdr.Year, pingHdr.Month, pingHdr.Day, pingHdr.Hour, pingHdr.Minute, pingHdr.Second, pingHdr.HSeconds * 10000)
-                        #FileNameinXTF = r.XTFFileHdr.ThisFileName                     
-                    r.rewind()
-                    r.close()
+                    (file_header, packets) = pyxtf.xtf_read(f)
+                    
+                    # Retrieve a list of all sonar packets
+                    sonar_packets = packets[pyxtf.XTFHeaderType.sonar]
+                    fStart = datetime.datetime(sonar_packets[0].Year, sonar_packets[0].Month, sonar_packets[0].Day, 
+                                               sonar_packets[0].Hour, sonar_packets[0].Minute, sonar_packets[0].Second,
+                                               sonar_packets[0].HSeconds * 10000)
+                    # Print the first sonar packet (ping)
+                    #print(fStart, flush=True)                   
+                    
+                    # r = XTFReader(f)            
+                    # pingHdr = r.readPacket()
+                    # # print the XTF file header information.  This gives a brief summary of the file contents.
+                    # #for ch in range(r.XTFFileHdr.NumberOfSonarChannels):
+                    # 	#print(r.XTFFileHdr.XTFChanInfo[ch])
+                    
+                    # if pingHdr != None:
+                    #     #print(pingHdr, flush=True)
+                    #     sys.exit() 
+                    #     fStart = datetime.datetime(pingHdr.Year, pingHdr.Month, pingHdr.Day, pingHdr.Hour, pingHdr.Minute, pingHdr.Second, pingHdr.HSeconds * 10000)
+                    #     #FileNameinXTF = r.XTFFileHdr.ThisFileName
+                    # else:
+                    #     #print(f'SSS File is empty {f}. The file will be skip. Please check...')
+                    #     fStart = datetime.datetime(1980, 1, 1)
+                    #     #print(pingHdr, flush=True)
+                    #     dfSkip = dfSkip.append(pd.Series([f, file_size], index=dfSkip.columns ), ignore_index=True)
+                                      
+                    # r.rewind()
+                    # r.close()
                 else:
                     dfSkip = dfSkip.append(pd.Series([f, file_size], index=dfSkip.columns ), ignore_index=True)
                 
@@ -1169,9 +1197,11 @@ def progressBar(cmd, pbar, index, ls):
     if cmd:
         pbar.update(1)
     else:
-        print_progress(index, len(ls)) # to have a nice progress bar in the GU            
-        if index % math.ceil(len(ls)/10) == 0: # decimate print
-            print(f"Files Process: {index+1}/{len(ls)}") 
+        print_progress(index, len(ls)) # to have a nice progress bar in the GUI
+        if index % math.ceil(len(ls)/10) == 0 and index != (len(ls) - 1): # decimate print
+            print(f"Files Process: {index+1}/{len(ls)}", flush=True)
+        if index == (len(ls) - 1):
+            print(f"Files Process: {index+1}/{len(ls)}", flush=True)
 
 # List file in subfolder with exclude
 def listFile(Folder, ext, exclude):

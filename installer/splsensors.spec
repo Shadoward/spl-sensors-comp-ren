@@ -4,8 +4,8 @@ import gooey
 gooey_root = os.path.dirname(gooey.__file__)
 gooey_languages = Tree(os.path.join(gooey_root, 'languages'), prefix = 'gooey/languages')
 gooey_images = Tree(os.path.join(gooey_root, 'images'), prefix = 'gooey/images')
-a = Analysis(['C:\\Users\\patrice.ponchant\\Documents\\GitHub\\spl-sensors-comp-ren\\src\\splsensors\\splsensors.py'],
-             pathex=['C:\\Users\\patrice.ponchant\\Documents\\GitHub\\spl-sensors-comp-ren\\src\\splsensors'],
+a = Analysis(['C:\\Users\\patrice.ponchant\\Documents\\GitHub\\splsensors\\src\\splsensors\\splsensors.py'],
+             pathex=['C:\\Users\\patrice.ponchant\\Documents\\GitHub\\splsensors\\src\\splsensors\\'],
              hiddenimports=[],
              hookspath=['hooks'],
              runtime_hooks=['rthooks/obspy.py'],
